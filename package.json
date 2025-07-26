@@ -1,0 +1,25 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "a backend at chai aur code",
+  "main": "index.js",
+  "scripts": {
+    "test": "javascript, backend aur chai "
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/harshdev26/react.git"
+  },
+  "keywords": [
+    "javascript",
+    "backend",
+    "aur",
+    "chai"
+  ],
+  "author": "\"Harsh Tiwari\"",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/harshdev26/react/issues"
+  },
+  "homepage": "https://github.com/harshdev26/react#readme"
+}
