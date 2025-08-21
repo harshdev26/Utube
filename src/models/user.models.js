@@ -60,7 +60,7 @@ userSchema.pre("save", async function(next) { //before saving run this async fun
     if(!this.isModified("password")) return next(); //if the password is modified then use pre or in this condition if password is not modified then just move to the next.
 
 
-    this.password = bcrypt.hash(this.password, 10) //hash password before saving that means will encrypt("convert it into plain unreadble string") the password and 10 is passed as a how many rounds.
+    this.password = await bcrypt.hash(this.password, 10) //hash password before saving that means will encrypt("convert it into plain unreadble string") the password and 10 is passed as a how many rounds.
     next()
 })
 
@@ -107,3 +107,54 @@ userSchema.methods.generateRefreshToken = function(){} //JWT Token
 
 export const User = mongoose.model("User", userSchema)
 
+/*
+import  { mongoose, Schema} from mongoose
+
+
+const userSchema = new Schema({
+username : 
+  {
+  type: String,
+  required: true,
+  unique: true,
+  lowercase: true,
+  trim: true,
+  index: true
+  }
+, 
+email : {
+ type: required,
+ required: true,
+ unique: true,
+ lowercase: true,
+ trim: true,
+ index: true
+ 
+
+}
+ 
+, 
+fullname : {
+type: String,
+required : true,
+lowercase: true,
+trim: true,
+index: true
+
+const user = new Schema({ }, {timestamps: true})
+
+}, 
+avatar: {}, 
+coverimage, 
+[password], 
+[refreshToken])
+
+}
+
+,
+{ timestamps: true}
+
+
+
+
+*/
