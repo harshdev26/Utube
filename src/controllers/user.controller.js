@@ -3,6 +3,9 @@ import { ApiError } from  "../utils/ApiError.js"
 import { User } from "../models/user.models.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js" 
+
+
+
 const registerUser = asyncHandler( async (req, res) => {  //registerUser: it is writing the function of register the user and asynchandler is just handling any kind of error, which
     // takes the parameters with the async function.
     //res.status(200).json({ // sending the statement to the user using res.status(200) that everything is ok!.
@@ -18,6 +21,9 @@ const registerUser = asyncHandler( async (req, res) => {  //registerUser: it is 
     // check for user creation 
     // return res
 
+console.log("FILES RECEIVED ===>", req.files);
+console.log("BODY RECEIVED ===>", req.body);
+
 
 
    const {fullName, email, username, password }= req.body  // req.body : that is containing the user detail like fullname, email, username, password.
@@ -30,7 +36,7 @@ const registerUser = asyncHandler( async (req, res) => {  //registerUser: it is 
     throw new ApiError(400, "All fields are required") 
   }
 
-  User.findOne({
+  const existedUser = await User.findOne({
     $or: [{ username }, { email }]
   })
 
@@ -42,12 +48,14 @@ const registerUser = asyncHandler( async (req, res) => {  //registerUser: it is 
 
   const avatarLocalPath =  req.files?.avatar[0].path;           //this line explains that req.files that is provided by multer middleware, will provide the path of the first file.
   const coverImageLocalPath = req.files?.coverImage[0]?.path;   //this line explains that req.files that is provided by multer, will provide the path of the first property of cover image. 
+  console.log("avatarLocalPath:", avatarLocalPath);
 
   if(!avatarLocalPath) { 
     throw new ApiError(400, "Avatar file is required")
   }
 
   const avatar = await uploadOnCloudinary(avatarLocalPath)   // dont work until this path uploaded.
+  console.log("Cloudinary upload result:", avatar);
   const coverImage =  await uploadOnCloudinary(coverImageLocalPath) //
 
  if(!avatar) {
@@ -60,7 +68,7 @@ const user = await User.create({            //this will create the users detail 
   coverImage : coverImage?.url || "", 
   email,
   password,
-  username: username.toLowercase() 
+  username: username.toLowerCase() 
 })
 
 const createdUser = await User.findById(user._id).select(  //this will return the data to the user and will not return those to fields password and refreshToken.
