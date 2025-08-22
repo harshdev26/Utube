@@ -1,7 +1,8 @@
 import { asyncHandler } from "../utils/asyncHandler.js" // after writing this we not have to write try and catch block everytime..
 import { ApiError } from  "../utils/ApiError.js"
 import { User } from "../models/user.models.js"
-import { uploadOnCloudinary } from "../utils/cloudinary.js" 
+import { uploadOnCloudinary } from "../utils/cloudinary.js"
+import { ApiResponse } from "../utils/ApiResponse.js" 
 const registerUser = asyncHandler( async (req, res) => {  //registerUser: it is writing the function of register the user and asynchandler is just handling any kind of error, which
     // takes the parameters with the async function.
     //res.status(200).json({ // sending the statement to the user using res.status(200) that everything is ok!.
@@ -62,11 +63,22 @@ const user = await User.create({            //this will create the users detail 
   username: username.toLowercase() 
 })
 
-const createdUser = await User.findById(user._id).select(  //help to find the users data by user id
+const createdUser = await User.findById(user._id).select(  //this will return the data to the user and will not return those to fields password and refreshToken.
        "-password -refreshToken"
 
 
 ) 
+
+  if (!createdUser) {
+    throw new ApiError(500, "Something went wrong while registering the user")
+  }
+
+  return res.status(201).json(
+
+     new ApiResponse(200, createdUser, "User registered Successfully")
+
+  )
+
 } )
 
 
