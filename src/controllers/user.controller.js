@@ -3,14 +3,15 @@ import { ApiError } from  "../utils/ApiError.js"
 import { User } from "../models/user.models.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js" 
+import { user } from "pg/lib/defaults.js"
 const generateAccessandRefreshToken = async(userId) =>{
   try{
     const user =  await User.findById(userId) //get the user details by userId.
     const accessToken = user.generateAccessToken()//we are generating the access token with the help of user details.
     const refreshToken = user.generateRefreshToken() //we are generating the refresh token with the help of user details.
     
-    user.refreshToken = refreshToken
-    user.save({validateBeforeSave: false}) //dont apply validation before saving 
+    user.refreshToken = refreshToken //we are saving this refresh token in the DB because this is required field and will be revoked again not like access token.
+    user.save({validateBeforeSave: false}) //dont apply validation before saving because validation will be revalidate other field as well which is not required.
 
     return {accessToken, refreshToken}  //returning it to the function called named as generateAccessandRefreshToken in line:140.
 
@@ -62,7 +63,13 @@ console.log("BODY RECEIVED ===>", req.body);
   //middlewares are used to add more fields to the users data.
 
   const avatarLocalPath =  req.files?.avatar[0].path;           //this line explains that req.files that is provided by multer middleware, will provide the path of the first file.
-  const coverImageLocalPath = req.files?.coverImage[0]?.path;   //this line explains that req.files that is provided by multer, will provide the path of the first property of cover image. 
+  // const coverImageLocalPath = req.files?.coverImage[0]?.path;   //this line explains that req.files that is provided by multer, will provide the path of the first property of cover image. 
+  
+     let coverImageLocalPath;
+    if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
+        coverImageLocalPath = req.files.coverImage[0].path
+    }
+  
   console.log("avatarLocalPath:", avatarLocalPath);
 
   if(!avatarLocalPath) { 
@@ -102,7 +109,7 @@ const createdUser = await User.findById(user._id).select(  //this will return th
 
   )
 
-} )
+})
 
 const loginUser = asyncHandler(async (req,res) => {
      // req-> body
@@ -140,9 +147,6 @@ const loginUser = asyncHandler(async (req,res) => {
  const {accessToken, refreshToken} = await generateAccessandRefreshToken(user._id)
 
 
-})
-
-
 const loggedInUser = await User.findById(user._id).
 select("-password -refreshToken")
 
@@ -150,9 +154,6 @@ const options = {  // after writing these to attributes our cookie can not be mo
   httpOnly: true,
   secure: true
 }
-
-
-
 
  return res
  .status(200)
@@ -162,15 +163,55 @@ const options = {  // after writing these to attributes our cookie can not be mo
     new ApiResponse(
       200,
       {
-        
-      }
+        user: loggedInUser, accessToken,
+        refreshToken
+
+      },
+      "User logged In Successfully"
     )
  ) 
+
+})
+
+
+
+
+
+const logoutUser = asyncHandler(async(req, res)=> {
+  await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        refreshToken: undefined
+      }
+    },
+      {
+        new: true
+      }
+    
+  )
+
+ const options = {
+  httpOnly: true,
+  secure: true
+
+ }
+
+ return res 
+ .status(200)
+ .clearCookie("accessToken", options)
+ .clearCookie("refreshToken", options)
+ .json(new ApiResponse(200, {}, "User logged Out"))
+
+
+
+}) 
  
 
 export  {
     
     registerUser,
-    loginUser
+    loginUser,
+    logoutUser
     
 }
