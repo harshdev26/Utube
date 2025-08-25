@@ -1,11 +1,11 @@
 import { asyncHandler } from "../utils/asyncHandler.js" // after writing this we not have to write try and catch block everytime..
-import { ApiError } from  "../utils/ApiError.js"
-import { User } from "../models/user.models.js"
-import { uploadOnCloudinary } from "../utils/cloudinary.js"
-import { ApiResponse } from "../utils/ApiResponse.js" 
-import jwt from "jsonwebtoken"
+import { ApiError } from  "../utils/ApiError.js" //import { ApiError } from  "../utils/ApiError.js"
+import { User } from "../models/user.models.js" //Database ka User model import kiya.
+import { uploadOnCloudinary } from "../utils/cloudinary.js" //Image ko cloudinary par upload karne ka function.
+import { ApiResponse } from "../utils/ApiResponse.js" //Standard format mein response bhejne ka helper.
+import jwt from "jsonwebtoken" //Token generate aur verify karne ke liye JWT library.
 //import { user } from "pg/lib/defaults.js"
-const generateAccessandRefreshToken = async(userId) =>{
+const generateAccessandRefreshTokens = async(userId) =>{
   try{
     const user =  await User.findById(userId) //get the user details by userId.
     const accessToken = user.generateAccessToken()//we are generating the access token with the help of user details.
@@ -145,21 +145,21 @@ const loginUser = asyncHandler(async (req,res) => {
   throw new ApiError(401, "Invalid User Credentials")
  }
 
- const {accessToken, refreshToken} = await generateAccessandRefreshToken(user._id)
+ const {accessToken, refreshToken} = await generateAccessandRefreshTokens(user._id)
 
 
 const loggedInUser = await User.findById(user._id).
 select("-password -refreshToken")
 
 const options = {  // after writing these to attributes our cookie can not be modified
-  httpOnly: true,
+  httpOnly: true, //so that it can not be access through javascript just by access through the server.
   secure: true
 }
 
  return res
  .status(200)
  .cookie("accessToken", accessToken, options)
- .cookie("refreshToken", refreshToken, options)
+ .cookie("refreshToken", refreshToken, options) // we used to send tokens with cookies to make secure to the tokens.
  .json(
     new ApiResponse(
       200,
@@ -198,7 +198,7 @@ const logoutUser = asyncHandler(async(req, res)=> {
 
  return res 
  .status(200)
- .clearCookie("accessToken", options)
+ .clearCookie("accessToken", options) // clearing the cookies that is containing the tokens.
  .clearCookie("refreshToken", options)
  .json(new ApiResponse(200, {}, "User logged Out"))
 
@@ -208,22 +208,44 @@ const logoutUser = asyncHandler(async(req, res)=> {
  
 
 const refreshAccessToken = asyncHandler(async (req,res)=> { //we are generating the refresh token again after logout by the user for the new refresh token when the user will be login.
-const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken //either the refresh token will be in req.body or req.cookie.
+const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken //either the refresh token will be in req.body or req.cookie. till yet user is logged in.
 
 if (!incomingRefreshToken) {
   throw new ApiError(401, "Something went wrong by the user."); 
 }
- const decodedToken = jwt.verify( //we are trying to compare the incomingRefreshToken by the user with refresh token that we have 
+ const decodedToken = jwt.verify( //we are trying to compare the incomingRefreshToken by the user with refresh secret which is saved in server earlier with this if it's find it will decode the details of the user.
   incomingRefreshToken,
   process.env.REFRESH_TOKEN_SECRET
 
  )
-const user = await User.findById(decodedToken?._id)  //we have the user._id using which we have generated our refresh token in user.model.js which is now stored in decodedToken.
+const user = await User.findById(decodedToken?._id)  //using id that is in decodedToken we can get the user details.
 if (!user) {
   throw new ApiError(401, " Invalid refresh token"); 
 }
 
+if(incomingRefreshToken !== user?.refreshToken){
+  throw new ApiError(401, "Refresh token is expired or used")
+ }
 
+ const options = {
+   httpOnly: true,
+   secure: true
+ }
+  
+ const { accessToken, newRefreshToken} = 
+ await generateAccessandRefreshTokens(user._id)
+
+ return res
+ .status(200)
+ .cookie("accessToken", accessToken, options)
+ .cookie("refreshToken", newRefreshToken , options)
+ .json(
+  new ApiResponse(
+    200,
+    {accessToken, refreshToken: newRefreshToken},
+    "Access token refreshed"
+  )
+ )
 })
 
 
@@ -236,3 +258,18 @@ export  {
     
 }
 
+
+/*
+// Dekho simple:
+
+Access token short time ke liye hota hai (minutes / 1 hour). Ye har API call ke sath bhejna padta hai taaki server ko pata chale user kaun hai.
+
+Refresh token long time ke liye hota hai (days / weeks). Ye direct API call me use nahi hota, sirf naya access token lane ke liye use hota hai.
+
+👉 Matlab:
+
+Logged in user bhi access token ke bina API nahi chala sakta, kyunki server ko verify karna hota hai.
+
+Agar access token expire ho jaaye → refresh token se naya access token milta hai, bina dobara login kare. ✅
+
+Bhai chaahe to main ek real-life example (ticket system ya pass system) dekar aur easy bana dun? */
