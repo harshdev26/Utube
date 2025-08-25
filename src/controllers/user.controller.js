@@ -3,7 +3,8 @@ import { ApiError } from  "../utils/ApiError.js"
 import { User } from "../models/user.models.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js" 
-import { user } from "pg/lib/defaults.js"
+import jwt from "jsonwebtoken"
+//import { user } from "pg/lib/defaults.js"
 const generateAccessandRefreshToken = async(userId) =>{
   try{
     const user =  await User.findById(userId) //get the user details by userId.
@@ -127,7 +128,7 @@ const loginUser = asyncHandler(async (req,res) => {
  
   const {email, username, password} = req.body //req.body
   
-  if(!username || !email ){ //either username or email will not be there it will generate the error 
+  if(!username && !email ){ //either username or email will not be there it will generate the error 
     throw new ApiError(400, "username or email is required")
   }
 
@@ -175,8 +176,6 @@ const options = {  // after writing these to attributes our cookie can not be mo
 
 
 
-
-
 const logoutUser = asyncHandler(async(req, res)=> {
   await User.findByIdAndUpdate(
     req.user._id,
@@ -208,6 +207,27 @@ const logoutUser = asyncHandler(async(req, res)=> {
 }) 
  
 
+const refreshAccessToken = asyncHandler(async (req,res)=> { //we are generating the refresh token again after logout by the user for the new refresh token when the user will be login.
+const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken //either the refresh token will be in req.body or req.cookie.
+
+if (!incomingRefreshToken) {
+  throw new ApiError(401, "Something went wrong by the user."); 
+}
+ const decodedToken = jwt.verify( //we are trying to compare the incomingRefreshToken by the user with refresh token that we have 
+  incomingRefreshToken,
+  process.env.REFRESH_TOKEN_SECRET
+
+ )
+const user = await User.findById(decodedToken?._id)  //we have the user._id using which we have generated our refresh token in user.model.js which is now stored in decodedToken.
+if (!user) {
+  throw new ApiError(401, " Invalid refresh token"); 
+}
+
+
+})
+
+
+
 export  {
     
     registerUser,
@@ -215,3 +235,4 @@ export  {
     logoutUser
     
 }
+

@@ -102,8 +102,8 @@ userSchema.methods.generateAccessToken =  function() { //this is a method to gen
 
 }
 
-userSchema.methods.generateAccessToken = function(){} //JWT Token
-userSchema.methods.generateRefreshToken = function(){} //JWT Token
+// userSchema.methods.generateAccessToken = function(){} //JWT Token
+// userSchema.methods.generateRefreshToken = function(){} //JWT Token
 
 export const User = mongoose.model("User", userSchema)
 
