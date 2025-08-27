@@ -213,6 +213,7 @@ const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken /
 if (!incomingRefreshToken) {
   throw new ApiError(401, "Something went wrong by the user."); 
 }
+try {
  const decodedToken = jwt.verify( //we are trying to compare the incomingRefreshToken by the user with refresh secret which is saved in server earlier with this if it's find it will decode the details of the user.
   incomingRefreshToken,
   process.env.REFRESH_TOKEN_SECRET
@@ -246,15 +247,47 @@ if(incomingRefreshToken !== user?.refreshToken){
     "Access token refreshed"
   )
  )
+
+
+
+}
+catch (error) {
+  throw new ApiError(500, "Something went wrong while refreshing access token.");
+}
 })
 
+const changeCurrentPassword = asyncHandler(async(req, res)=>{
+  const {oldPassword, newPassword, confPassword} = req.body
 
+  if ((newPassword === confPassword)) {
+
+  }
+  
+
+  const user = await User.findById(req.user?.id)
+  const isPasswordCorrect = await user.
+  isPasswordCorrect(oldPassword)
+
+  if(!isPasswordCorrect){
+    throw new ApiError(400, "Invalid old password")
+  }
+
+  user.password = newPassword
+  await user.save({validateBeforeSave: false})
+
+  return res
+  .status(200)
+  .json(new ApiResponse(200, {}, "Password changed successfully"))
+
+
+})
 
 export  {
     
     registerUser,
     loginUser,
-    logoutUser
+    logoutUser,
+    refreshAccessToken
     
 }
 
