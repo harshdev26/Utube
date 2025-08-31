@@ -4,6 +4,7 @@ import { User } from "../models/user.models.js" //Database ka User model import 
 import { uploadOnCloudinary } from "../utils/cloudinary.js" //Image ko cloudinary par upload karne ka function.
 import { ApiResponse } from "../utils/ApiResponse.js" //Standard format mein response bhejne ka helper.
 import jwt from "jsonwebtoken" //Token generate aur verify karne ke liye JWT library.
+import mongoose from "mongoose"
 //import { user } from "pg/lib/defaults.js"
 const generateAccessandRefreshTokens = async(userId) =>{
   try{
@@ -377,18 +378,18 @@ const getUserChannelProfile = asyncHandler(async(req,res) =>{
     throw new ApiError(400, "username is missing")
   }
 
-  const channel = await User.aggregate([
-    {
+  const channel = await User.aggregate([ //we used aggregate here instead of findone because to apply multiple operations in database ,User is the current collection and Subscriptions is the another collection(jisme se data aa raha h)
+     {
       $match:{
-        username: username?.toLowerCase()
+        username: username?.toLowerCase() //$match is used to match the username and retrive the user's data 
       }
     },
     {
-      $lookup:{
-        from: "subscriptions",
-        localField: "_id",
-        foreignField: "channel",
-        as: "subscribers"
+      $lookup:{ //$lookup is used to join the two different collections in the database(MONGODB) 
+        from: "subscriptions", //it explains that from which collection(subscriptions) we have to retrieve the data.
+        localField: "_id",//current collection(User) ka kaun sa field match hoga.
+        foreignField: "channel", //foreignField(subscriptions) ka kaun sa field match hoga
+        as: "subscribers" //getting the data of subscribers.
       }
     },
     {
@@ -400,24 +401,95 @@ const getUserChannelProfile = asyncHandler(async(req,res) =>{
       }
     },
     {
-       $addFields:{
-      subscribersCount: {
+       $addFields:{         //use to add new field
+      subscribersCount: {            //used to count the size of the subscibers Array
         $size: "$subscribers"
       },
-      channelsSubscribedToCount: {
-        $size : "$subscribedTo"
+      channelsSubscribedToCount: {       //used to count the channelssubscribedto Array size
+        $size : "$subscribedTo"         
       },
       isSubscribed: {
         $cond:{
-          if: {$in: [req.user?._id, "$subscribers.subsciber"]}
+          if: {$in: [req.user?._id, "$subscribers.subsciber"]} //check whether the user is in subscibers array or not?
+
+               }
+            }
+         } 
+      },
+      {
+        $project:{
+          fullName: 1,
+          username: 1,
+          subscribersCount: 1,
+          channelsSubscribedToCount: 1,
+          isSubscribed: 1,
+          avatar: 1,
+          coverImage: 1,
+          email: 1
         }
       }
-     }
+   ])
+
+   if(!channel?.length){
+    throw new ApiError(404, "channel does not exists")
+   }
+
+   return res
+   .status(200)
+   .json(
+    new ApiResponse(200, channel[0], "User channel fetched Successfully")
+   )
+})
+
+const getWatchHistory = asyncHandler(async(req, res) => {
+  const user = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.user._id)
+      }
+    },{
+      $lookup:{
+        from: "videos",
+        localField: "WatchHistory",
+        foreignField: "_id",
+        as: "watchHistory",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    fullName: 1,
+                    username: 1,
+                    avatar: 1
+                  }
+                }
+              ]
+
+            }
+          }
+        ]
+
+      }
     }
   ])
 
-})
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(
+      200,
+      user[0].watchHistory,
+      "Watch history fetched Successfully"
+    )
+  )
 
+
+})
 
 
 
@@ -432,9 +504,37 @@ export  {
     getCurrentUser,
     updateAccountDetails,
     updateUserAvatar,
-    updateUserCoverImage
+    updateUserCoverImage,
+    getUserChannelProfile,
+    getWatchHistory
     
 }
+
+
+/*
+aggregate tab chalate hain jab ek saath multiple kaam karne ho database mein.
+
+👉 Yaha reason:
+
+User ka data lena hai.
+
+Uske subscribers bhi laane hain.
+
+Usne kitne channels ko subscribe kiya woh bhi laana hai.
+
+Saath hi counts aur extra fields calculate karni hain.
+
+Agar sirf .findOne() use karte toh bas user milta, ye extra joined data aur counts nahi milte.
+
+Chahta hai main tujhe iska ek normal .findOne() vs .aggregate() ka difference example bana ke samjhau?
+
+
+
+*/
+
+
+
+
 
 
 /*
