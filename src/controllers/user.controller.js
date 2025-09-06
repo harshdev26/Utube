@@ -1,6 +1,6 @@
 import { asyncHandler } from "../utils/asyncHandler.js" // after writing this we not have to write try and catch block everytime..
 import { ApiError } from  "../utils/ApiError.js" //import { ApiError } from  "../utils/ApiError.js"
-import { User } from "../models/user.models.js" //Database ka User model import kiya.
+import { User } from "../models/user.model.js" //Database ka User model import kiya.
 import { uploadOnCloudinary } from "../utils/cloudinary.js" //Image ko cloudinary par upload karne ka function.
 import { ApiResponse } from "../utils/ApiResponse.js" //Standard format mein response bhejne ka helper.
 import jwt from "jsonwebtoken" //Token generate aur verify karne ke liye JWT library.
@@ -215,7 +215,7 @@ if (!incomingRefreshToken) {
   throw new ApiError(401, "Something went wrong by the user."); 
 }
 try {
- const decodedToken = jwt.verify( //we are trying to compare the incomingRefreshToken by the user with refresh secret which is saved in server earlier with this if it's find it will decode the details of the user.
+  const decodedToken = jwt.verify( //we are trying to compare the incomingRefreshToken by the user with refresh secret which is saved in server earlier with this if it's find it will decode the details of the user.
   incomingRefreshToken,
   process.env.REFRESH_TOKEN_SECRET
 

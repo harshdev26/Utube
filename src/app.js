@@ -23,13 +23,13 @@ app.use(cookieParser())
 // routes import 
 
 import userRouter from "./routes/user.routes.js"
-
-
+import playlistRouter from "./routes/playlist.routes.js"
+import tweetRouter from "./routes/tweet.routes.js"
 
 //routes declaration 
 app.use("/api/v1/users", userRouter)   //this line explains that once a user will type /user(this will only works as prefix in url for ex: /user/google.com), the controller will be send to userRouter. 
-
-
+app.use("/api/v1/playlists", playlistRouter)
+app.use("/api/v1/tweets", tweetRouter)
 //http://localhost:8000/users/api/v1/users/register
 export { app }
 
